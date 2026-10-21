@@ -24,6 +24,7 @@ class WatchyMacPaint : public Watchy{
         void drawMacPaint();
         void drawPipBoy();
         void drawDOS();
+        void drawMiniDigit(uint8_t digit, int16_t x, int16_t y);
         void drawBattery();
         uint8_t batteryPercentage(float voltage);
 };

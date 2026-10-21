@@ -68,6 +68,30 @@ void WatchyMacPaint::drawBattery() {
     }
 }
 
+void WatchyMacPaint::drawMiniDigit(uint8_t digit, int16_t x, int16_t y) {
+    const unsigned char *bitmap = numbers[digit % 10];
+    const uint8_t sourceRowBytes = 5;
+    for (uint8_t targetY = 0; targetY < 17; targetY++) {
+        for (uint8_t targetX = 0; targetX < 13; targetX++) {
+            bool ink = false;
+            for (uint8_t offsetY = 0; offsetY < 3 && !ink; offsetY++) {
+                uint8_t sourceY = targetY * 3 + offsetY;
+                if (sourceY >= 50) continue;
+                for (uint8_t offsetX = 0; offsetX < 3; offsetX++) {
+                    uint8_t sourceX = targetX * 3 + offsetX;
+                    if (sourceX >= 38) continue;
+                    uint8_t value = pgm_read_byte(bitmap + sourceY * sourceRowBytes + sourceX / 8);
+                    if (value & (0x80 >> (sourceX & 7))) {
+                        ink = true;
+                        break;
+                    }
+                }
+            }
+            if (ink) display.drawPixel(x + targetX, y + targetY, GxEPD_BLACK);
+        }
+    }
+}
+
 void WatchyMacPaint::drawWatchFace(){
     drawWatchFacePreview(getSelectedWatchFace());
 }
@@ -88,18 +112,21 @@ void WatchyMacPaint::drawMacPaint(){
     display.drawBitmap(153, 70, numbers[currentTime.Minute%10], 38, 50, GxEPD_BLACK); //second digit
 
     // Date below the clock.
-    char date[16];
-    String month = monthShortStr(currentTime.Month);
-    month.toUpperCase();
-    snprintf(date, sizeof(date), "%02d %s %04d", currentTime.Day,
-             month.c_str(), tmYearToCalendar(currentTime.Year));
-    display.setFont(&FreeMonoBold9pt7b);
-    display.setTextColor(GxEPD_BLACK);
-    int16_t x1, y1;
-    uint16_t width, height;
-    display.getTextBounds(date, 0, 148, &x1, &y1, &width, &height);
-    display.setCursor((200 - width) / 2, 148);
-    display.print(date);
+    const uint16_t year = tmYearToCalendar(currentTime.Year);
+    const uint8_t dateDigits[] = {
+        (uint8_t)(currentTime.Day / 10), (uint8_t)(currentTime.Day % 10),
+        (uint8_t)(currentTime.Month / 10), (uint8_t)(currentTime.Month % 10),
+        (uint8_t)((year / 1000) % 10), (uint8_t)((year / 100) % 10),
+        (uint8_t)((year / 10) % 10), (uint8_t)(year % 10)};
+    int16_t dateX = 49;
+    for (uint8_t i = 0; i < 8; i++) {
+        drawMiniDigit(dateDigits[i], dateX, 132);
+        dateX += 14;
+        if (i == 1 || i == 3) {
+            display.drawLine(dateX, 146, dateX + 5, 133, GxEPD_BLACK);
+            dateX += 8;
+        }
+    }
 
     drawBattery();
 }

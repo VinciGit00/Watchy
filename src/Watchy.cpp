@@ -398,7 +398,10 @@ void Watchy::showWatchFaceSelector() {
       selectWatchFace(selected);
       waitForRelease();
       RTC.read(currentTime);
-      showWatchFace(false);
+      display.setFullWindow();
+      drawWatchFacePreview(selected);
+      display.display(false);
+      guiState = WATCHFACE_STATE;
       return;
     }
     if (pressed(UP_BTN_PIN)) {
