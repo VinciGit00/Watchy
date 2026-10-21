@@ -88,13 +88,17 @@ void WatchyMacPaint::drawMacPaint(){
     display.drawBitmap(153, 70, numbers[currentTime.Minute%10], 38, 50, GxEPD_BLACK); //second digit
 
     // Date below the clock.
-    char date[11];
-    snprintf(date, sizeof(date), "%02d/%02d/%04d", currentTime.Day,
-             currentTime.Month, tmYearToCalendar(currentTime.Year));
-    display.setFont();
-    display.setTextSize(1);
+    char date[16];
+    String month = monthShortStr(currentTime.Month);
+    month.toUpperCase();
+    snprintf(date, sizeof(date), "%02d %s %04d", currentTime.Day,
+             month.c_str(), tmYearToCalendar(currentTime.Year));
+    display.setFont(&FreeMonoBold9pt7b);
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(70, 143);
+    int16_t x1, y1;
+    uint16_t width, height;
+    display.getTextBounds(date, 0, 148, &x1, &y1, &width, &height);
+    display.setCursor((200 - width) / 2, 148);
     display.print(date);
 
     drawBattery();

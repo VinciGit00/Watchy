@@ -354,20 +354,34 @@ void Watchy::showWatchFaceSelector() {
     delay(80);
   };
   auto drawSelection = [&]() {
-    drawWatchFacePreview(selected);
-    display.fillRect(0, 174, 200, 26, GxEPD_BLACK);
-    display.drawFastHLine(0, 173, 200, GxEPD_WHITE);
+    display.setFullWindow();
+    display.fillScreen(GxEPD_BLACK);
+    display.setTextColor(GxEPD_WHITE);
+    display.setFont(&FreeMonoBold9pt7b);
+    display.setCursor(8, 24);
+    display.print("SET WATCHFACE");
+    display.drawFastHLine(0, 34, 200, GxEPD_WHITE);
+    for (uint8_t i = 0; i < count; i++) {
+      int y = 67 + i * 34;
+      if (i == selected) {
+        display.fillRect(3, y - 20, 194, 27, GxEPD_WHITE);
+        display.setTextColor(GxEPD_BLACK);
+        display.setCursor(10, y);
+        display.print("> ");
+      } else {
+        display.setTextColor(GxEPD_WHITE);
+        display.setCursor(10, y);
+        display.print("  ");
+      }
+      display.print(getWatchFaceName(i));
+    }
     display.setFont();
     display.setTextSize(1);
     display.setTextColor(GxEPD_WHITE);
-    display.setCursor(5, 184);
-    display.print(selected + 1);
-    display.print("/");
-    display.print(count);
-    display.print("  ");
-    display.print(getWatchFaceName(selected));
-    display.setCursor(5, 196);
-    display.print("RIGHT: SELECT  FIRE: OK");
+    display.setCursor(8, 181);
+    display.print("RIGHT BUTTONS: MOVE");
+    display.setCursor(8, 194);
+    display.print("BOTTOM LEFT: OK");
     display.display(false);
   };
 
