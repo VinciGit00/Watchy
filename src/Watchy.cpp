@@ -144,6 +144,9 @@ void Watchy::handleButtonPress() {
       case 6:
         showSyncNTP();
         break;
+      case 7:
+        showSpaceInvaders();
+        break;
       default:
         break;
       }
@@ -226,6 +229,9 @@ void Watchy::handleButtonPress() {
           case 6:
             showSyncNTP();
             break;
+          case 7:
+            showSpaceInvaders();
+            break;
           default:
             break;
           }
@@ -279,9 +285,9 @@ void Watchy::showMenu(byte menuIndex, bool partialRefresh) {
   const char *menuItems[] = {
       "About Watchy", "Vibrate Motor", "Show Accelerometer",
       "Set Time",     "Setup WiFi",    "Update Firmware",
-      "Sync NTP"};
+      "Sync NTP",     "Space Invaders"};
   for (int i = 0; i < MENU_LENGTH; i++) {
-    yPos = MENU_HEIGHT + (MENU_HEIGHT * i);
+    yPos = 23 + (23 * i);
     display.setCursor(0, yPos);
     if (i == menuIndex) {
       display.getTextBounds(menuItems[i], 0, yPos, &x1, &y1, &w, &h);
@@ -312,9 +318,9 @@ void Watchy::showFastMenu(byte menuIndex) {
   const char *menuItems[] = {
       "About Watchy", "Vibrate Motor", "Show Accelerometer",
       "Set Time",     "Setup WiFi",    "Update Firmware",
-      "Sync NTP"};
+      "Sync NTP",     "Space Invaders"};
   for (int i = 0; i < MENU_LENGTH; i++) {
-    yPos = MENU_HEIGHT + (MENU_HEIGHT * i);
+    yPos = 23 + (23 * i);
     display.setCursor(0, yPos);
     if (i == menuIndex) {
       display.getTextBounds(menuItems[i], 0, yPos, &x1, &y1, &w, &h);
@@ -330,6 +336,162 @@ void Watchy::showFastMenu(byte menuIndex) {
   display.display(true);
 
   guiState = MAIN_MENU_STATE;
+}
+
+void Watchy::showSpaceInvaders() {
+  guiState = APP_STATE;
+  pinMode(MENU_BTN_PIN, INPUT);
+  pinMode(BACK_BTN_PIN, INPUT);
+  pinMode(UP_BTN_PIN, INPUT);
+  pinMode(DOWN_BTN_PIN, INPUT);
+
+  const int rows = 3;
+  const int columns = 6;
+  bool aliens[rows][columns];
+  int shipX, formationX, formationY, direction, score, remaining;
+  bool bulletActive, gameOver, victory;
+  int bulletX, bulletY;
+  bool firstFrame = true;
+
+  auto resetGame = [&]() {
+    for (int row = 0; row < rows; row++)
+      for (int column = 0; column < columns; column++)
+        aliens[row][column] = true;
+    shipX = 91;
+    formationX = 14;
+    formationY = 29;
+    direction = 1;
+    score = 0;
+    remaining = rows * columns;
+    bulletActive = false;
+    bulletX = bulletY = 0;
+    gameOver = victory = false;
+  };
+
+  auto drawAlien = [&](int x, int y) {
+    display.fillRect(x + 3, y, 8, 2, GxEPD_WHITE);
+    display.fillRect(x + 1, y + 2, 12, 6, GxEPD_WHITE);
+    display.fillRect(x, y + 4, 14, 3, GxEPD_WHITE);
+    display.fillRect(x + 3, y + 8, 2, 3, GxEPD_WHITE);
+    display.fillRect(x + 9, y + 8, 2, 3, GxEPD_WHITE);
+    display.drawPixel(x + 4, y + 4, GxEPD_BLACK);
+    display.drawPixel(x + 9, y + 4, GxEPD_BLACK);
+  };
+
+  auto drawGame = [&]() {
+    display.setFullWindow();
+    display.fillScreen(GxEPD_BLACK);
+    display.setTextColor(GxEPD_WHITE);
+    display.setFont();
+    display.setTextSize(1);
+    display.setCursor(5, 10);
+    display.print("SPACE INVADERS");
+    display.setCursor(151, 10);
+    display.print(score);
+    display.drawFastHLine(0, 15, 200, GxEPD_WHITE);
+    for (int row = 0; row < rows; row++)
+      for (int column = 0; column < columns; column++)
+        if (aliens[row][column])
+          drawAlien(formationX + column * 28, formationY + row * 20);
+    if (bulletActive)
+      display.fillRect(bulletX, bulletY, 2, 7, GxEPD_WHITE);
+    display.fillRect(shipX + 7, 174, 4, 4, GxEPD_WHITE);
+    display.fillRect(shipX + 3, 178, 12, 4, GxEPD_WHITE);
+    display.fillRect(shipX, 182, 18, 5, GxEPD_WHITE);
+    if (gameOver || victory) {
+      display.fillRect(24, 83, 152, 39, GxEPD_BLACK);
+      display.drawRect(24, 83, 152, 39, GxEPD_WHITE);
+      display.setTextSize(2);
+      display.setCursor(victory ? 51 : 39, 90);
+      display.print(victory ? "YOU WIN" : "GAME OVER");
+      display.setTextSize(1);
+      display.setCursor(48, 111);
+      display.print("FIRE TO RESTART");
+    }
+    display.display(!firstFrame);
+    firstFrame = false;
+  };
+
+  auto anyButtonPressed = [&]() {
+    return digitalRead(MENU_BTN_PIN) == ACTIVE_LOW ||
+           digitalRead(BACK_BTN_PIN) == ACTIVE_LOW ||
+           digitalRead(UP_BTN_PIN) == ACTIVE_LOW ||
+           digitalRead(DOWN_BTN_PIN) == ACTIVE_LOW;
+  };
+  auto waitForRelease = [&]() {
+    while (anyButtonPressed()) delay(20);
+    delay(80);
+  };
+
+  resetGame();
+  drawGame();
+  waitForRelease();
+  unsigned long lastInput = millis();
+  while (true) {
+    if (digitalRead(MENU_BTN_PIN) == ACTIVE_LOW) {
+      waitForRelease();
+      showMenu(menuIndex, false);
+      return;
+    }
+    bool action = false;
+    if (digitalRead(BACK_BTN_PIN) == ACTIVE_LOW) {
+      if (gameOver || victory) resetGame();
+      else if (!bulletActive) {
+        bulletActive = true;
+        bulletX = shipX + 8;
+        bulletY = 167;
+      }
+      action = true;
+    } else if (!gameOver && !victory &&
+               digitalRead(UP_BTN_PIN) == ACTIVE_LOW) {
+      shipX = max(4, shipX - 10);
+      action = true;
+    } else if (!gameOver && !victory &&
+               digitalRead(DOWN_BTN_PIN) == ACTIVE_LOW) {
+      shipX = min(178, shipX + 10);
+      action = true;
+    }
+    if (action) {
+      lastInput = millis();
+      if (!gameOver && !victory) {
+        if (bulletActive) {
+          bulletY -= 15;
+          if (bulletY < 17) bulletActive = false;
+          else for (int row = 0; row < rows && bulletActive; row++)
+            for (int column = 0; column < columns; column++) {
+              int alienX = formationX + column * 28;
+              int alienY = formationY + row * 20;
+              if (aliens[row][column] && bulletX >= alienX &&
+                  bulletX <= alienX + 14 && bulletY <= alienY + 11 &&
+                  bulletY + 7 >= alienY) {
+                aliens[row][column] = false;
+                bulletActive = false;
+                score += 10;
+                remaining--;
+                break;
+              }
+            }
+        }
+        if (remaining == 0) victory = true;
+        else {
+          int nextX = formationX + direction * 6;
+          if (nextX < 5 || nextX + 154 > 195) {
+            direction = -direction;
+            formationY += 9;
+          } else formationX = nextX;
+          if (formationY + (rows - 1) * 20 + 11 >= 170)
+            gameOver = true;
+        }
+      }
+      drawGame();
+      waitForRelease();
+    }
+    if (millis() - lastInput > 60000UL) {
+      showMenu(menuIndex, false);
+      return;
+    }
+    delay(20);
+  }
 }
 
 void Watchy::showAbout() {
