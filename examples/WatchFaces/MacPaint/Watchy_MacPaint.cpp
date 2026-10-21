@@ -360,39 +360,67 @@ void WatchyMacPaint::drawEarth() {
     uint16_t foreground = watchFaceInverted ? GxEPD_WHITE : GxEPD_BLACK;
     display.fillScreen(background);
     display.setTextColor(foreground);
-    // Original Watchy 7 Segment face recovered from the factory backup.
+
     display.setFont(&DSEG7_Classic_Bold_53);
     display.setCursor(5, 58);
     if (currentTime.Hour < 10) display.print("0");
     display.print(currentTime.Hour);
     display.print(":");
     if (currentTime.Minute < 10) display.print("0");
-    display.print(currentTime.Minute);
+    display.println(currentTime.Minute);
 
-    weatherData weather = getWeatherData();
     display.setFont(&Seven_Segment10pt7b);
-    String day = dayShortStr(currentTime.Wday);
-    day.toUpperCase();
     int16_t x1, y1;
-    uint16_t width, height;
-    display.getTextBounds(day, 0, 0, &x1, &y1, &width, &height);
-    display.setCursor(87 - width, 85);
-    display.print(day);
+    uint16_t w, h;
+    String day = dayStr(currentTime.Wday);
+    display.getTextBounds(day, 5, 85, &x1, &y1, &w, &h);
+    if (currentTime.Wday == 4) w -= 5;
+    display.setCursor(85 - w, 85);
+    display.println(day);
     String month = monthShortStr(currentTime.Month);
-    month.toUpperCase();
-    display.getTextBounds(month, 0, 0, &x1, &y1, &width, &height);
-    display.setCursor(87 - width, 110);
-    display.print(month);
+    display.getTextBounds(month, 60, 110, &x1, &y1, &w, &h);
+    display.setCursor(85 - w, 110);
+    display.println(month);
 
     display.setFont(&DSEG7_Classic_Bold_25);
     display.setCursor(5, 120);
     if (currentTime.Day < 10) display.print("0");
-    display.print(currentTime.Day);
+    display.println(currentTime.Day);
     display.setCursor(5, 150);
-    display.print(tmYearToCalendar(currentTime.Year));
+    display.println(tmYearToCalendar(currentTime.Year));
+
+    uint32_t stepCount = sensor.getCounter();
+    display.drawBitmap(10, 165, steps, 19, 23, foreground);
+    display.setCursor(35, 190);
+    display.println(stepCount);
+
+    display.drawBitmap(154, 73, battery, 37, 21, foreground);
+    display.fillRect(159, 78, 27, 11, background);
+    float voltage = getBatteryVoltage();
+    uint8_t batteryLevel = voltage > 4.1 ? 3 : voltage > 3.95 ? 2 :
+                           voltage > 3.80 ? 1 : 0;
+    for (uint8_t i = 0; i < batteryLevel; i++)
+        display.fillRect(159 + i * 9, 78, 7, 11, foreground);
+
+    display.drawBitmap(120, 77, WIFI_CONFIGURED ? wifi : wifioff,
+                       26, 18, foreground);
+
+    weatherData weather = getWeatherData();
+    int8_t temperature = weather.temperature;
+    display.setFont(&DSEG7_Classic_Regular_39);
+    display.getTextBounds(String(temperature), 0, 0, &x1, &y1, &w, &h);
+    if (159 - w - x1 > 87) display.setCursor(159 - w - x1, 150);
+    else {
+        display.setFont(&DSEG7_Classic_Bold_25);
+        display.getTextBounds(String(temperature), 0, 0, &x1, &y1, &w, &h);
+        display.setCursor(159 - w - x1, 136);
+    }
+    display.println(temperature);
+    display.drawBitmap(165, 110, weather.isMetric ? celsius : fahrenheit,
+                       26, 20, foreground);
 
     const unsigned char *weatherIcon = nullptr;
-    int code = weather.weatherConditionCode;
+    int16_t code = weather.weatherConditionCode;
     if (code > 801) weatherIcon = cloudy;
     else if (code == 801) weatherIcon = cloudsun;
     else if (code == 800) weatherIcon = sunny;
@@ -401,31 +429,6 @@ void WatchyMacPaint::drawEarth() {
     else if (code >= 500) weatherIcon = rain;
     else if (code >= 300) weatherIcon = drizzle;
     else if (code >= 200) weatherIcon = thunderstorm;
-    if (weatherIcon) display.drawBitmap(106, 91, weatherIcon, 48, 32, foreground);
-
-    display.setFont(&DSEG7_Classic_Regular_15);
-    display.setCursor(108, 145);
-    display.print("SUN ");
-    if (weather.sunrise.Hour < 24) {
-        if (weather.sunrise.Hour < 10) display.print("0");
-        display.print(weather.sunrise.Hour);
-        display.print(":");
-        if (weather.sunrise.Minute < 10) display.print("0");
-        display.print(weather.sunrise.Minute);
-    } else display.print("--:--");
-
-    uint32_t stepCount = sensor.getCounter();
-    display.drawBitmap(7, 165, steps, 19, 23, foreground);
-    display.setFont(&DSEG7_Classic_Regular_15);
-    display.setCursor(31, 188);
-    display.print(stepCount);
-    display.drawBitmap(112, 168, WIFI_CONFIGURED ? wifi : wifioff,
-                       26, 18, foreground);
-
-    uint8_t percent = batteryPercentage(getBatteryVoltage());
-    display.drawBitmap(154, 166, battery, 37, 21, foreground);
-    display.fillRect(159, 171, 27, 11, background);
-    uint8_t segments = percent == 0 ? 0 : min((uint8_t)3, (uint8_t)((percent + 32) / 33));
-    for (uint8_t i = 0; i < segments; i++)
-        display.fillRect(159 + i * 9, 171, 7, 11, foreground);
+    if (weatherIcon)
+        display.drawBitmap(145, 158, weatherIcon, 48, 32, foreground);
 }
