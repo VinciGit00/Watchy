@@ -136,15 +136,9 @@ void Watchy::handleButtonPress() {
         setTime();
         break;
       case 4:
-        setupWifi();
-        break;
-      case 5:
-        showUpdateFW();
-        break;
-      case 6:
         showSyncNTP();
         break;
-      case 7:
+      case 5:
         showSpaceInvaders();
         break;
       default:
@@ -221,15 +215,9 @@ void Watchy::handleButtonPress() {
             setTime();
             break;
           case 4:
-            setupWifi();
-            break;
-          case 5:
-            showUpdateFW();
-            break;
-          case 6:
             showSyncNTP();
             break;
-          case 7:
+          case 5:
             showSpaceInvaders();
             break;
           default:
@@ -284,10 +272,9 @@ void Watchy::showMenu(byte menuIndex, bool partialRefresh) {
 
   const char *menuItems[] = {
       "About Watchy", "Vibrate Motor", "Show Accelerometer",
-      "Set Time",     "Setup WiFi",    "Update Firmware",
-      "Sync NTP",     "Space Invaders"};
+      "Set Time",     "Sync NTP",      "Space Invaders"};
   for (int i = 0; i < MENU_LENGTH; i++) {
-    yPos = 23 + (23 * i);
+    yPos = MENU_HEIGHT + (MENU_HEIGHT * i);
     display.setCursor(0, yPos);
     if (i == menuIndex) {
       display.getTextBounds(menuItems[i], 0, yPos, &x1, &y1, &w, &h);
@@ -317,10 +304,9 @@ void Watchy::showFastMenu(byte menuIndex) {
 
   const char *menuItems[] = {
       "About Watchy", "Vibrate Motor", "Show Accelerometer",
-      "Set Time",     "Setup WiFi",    "Update Firmware",
-      "Sync NTP",     "Space Invaders"};
+      "Set Time",     "Sync NTP",      "Space Invaders"};
   for (int i = 0; i < MENU_LENGTH; i++) {
-    yPos = 23 + (23 * i);
+    yPos = MENU_HEIGHT + (MENU_HEIGHT * i);
     display.setCursor(0, yPos);
     if (i == menuIndex) {
       display.getTextBounds(menuItems[i], 0, yPos, &x1, &y1, &w, &h);
@@ -347,10 +333,15 @@ void Watchy::showSpaceInvaders() {
 
   const int rows = 3;
   const int columns = 6;
+  const int maxBullets = 4;
+  const int shieldCount = 4;
   bool aliens[rows][columns];
   int shipX, formationX, formationY, direction, score, remaining;
-  bool bulletActive, gameOver, victory;
-  int bulletX, bulletY;
+  bool bulletsActive[maxBullets], gameOver, victory;
+  int bulletX[maxBullets], bulletY[maxBullets];
+  int shieldHealth[shieldCount];
+  bool enemyBulletActive;
+  int enemyBulletX, enemyBulletY;
   bool firstFrame = true;
 
   auto resetGame = [&]() {
@@ -363,8 +354,13 @@ void Watchy::showSpaceInvaders() {
     direction = 1;
     score = 0;
     remaining = rows * columns;
-    bulletActive = false;
-    bulletX = bulletY = 0;
+    for (int i = 0; i < maxBullets; i++) {
+      bulletsActive[i] = false;
+      bulletX[i] = bulletY[i] = 0;
+    }
+    for (int i = 0; i < shieldCount; i++) shieldHealth[i] = 4;
+    enemyBulletActive = false;
+    enemyBulletX = enemyBulletY = 0;
     gameOver = victory = false;
   };
 
@@ -393,8 +389,23 @@ void Watchy::showSpaceInvaders() {
       for (int column = 0; column < columns; column++)
         if (aliens[row][column])
           drawAlien(formationX + column * 28, formationY + row * 20);
-    if (bulletActive)
-      display.fillRect(bulletX, bulletY, 2, 7, GxEPD_WHITE);
+    for (int i = 0; i < maxBullets; i++)
+      if (bulletsActive[i])
+        display.fillRect(bulletX[i], bulletY[i], 2, 7, GxEPD_WHITE);
+    if (enemyBulletActive)
+      display.fillRect(enemyBulletX, enemyBulletY, 3, 7, GxEPD_WHITE);
+    for (int i = 0; i < shieldCount; i++) {
+      if (shieldHealth[i] > 0) {
+        int shieldX = 13 + i * 48;
+        display.fillRect(shieldX + 3, 149, 24, 4, GxEPD_WHITE);
+        display.fillRect(shieldX, 153, 30, 8, GxEPD_WHITE);
+        display.fillRect(shieldX, 161, 9, 4, GxEPD_WHITE);
+        display.fillRect(shieldX + 21, 161, 9, 4, GxEPD_WHITE);
+        for (int damage = shieldHealth[i]; damage < 4; damage++)
+          display.fillRect(shieldX + 5 + damage * 6, 151 + (damage % 2) * 5,
+                           5, 5, GxEPD_BLACK);
+      }
+    }
     display.fillRect(shipX + 7, 174, 4, 4, GxEPD_WHITE);
     display.fillRect(shipX + 3, 178, 12, 4, GxEPD_WHITE);
     display.fillRect(shipX, 182, 18, 5, GxEPD_WHITE);
@@ -436,10 +447,15 @@ void Watchy::showSpaceInvaders() {
     bool action = false;
     if (digitalRead(BACK_BTN_PIN) == ACTIVE_LOW) {
       if (gameOver || victory) resetGame();
-      else if (!bulletActive) {
-        bulletActive = true;
-        bulletX = shipX + 8;
-        bulletY = 167;
+      else {
+        for (int i = 0; i < maxBullets; i++) {
+          if (!bulletsActive[i]) {
+            bulletsActive[i] = true;
+            bulletX[i] = shipX + 8;
+            bulletY[i] = 167;
+            break;
+          }
+        }
       }
       action = true;
     } else if (!gameOver && !victory &&
@@ -454,23 +470,56 @@ void Watchy::showSpaceInvaders() {
     if (action) {
       lastInput = millis();
       if (!gameOver && !victory) {
-        if (bulletActive) {
-          bulletY -= 15;
-          if (bulletY < 17) bulletActive = false;
-          else for (int row = 0; row < rows && bulletActive; row++)
+        for (int i = 0; i < maxBullets; i++) {
+          if (!bulletsActive[i]) continue;
+          bulletY[i] -= 15;
+          if (bulletY[i] < 17) bulletsActive[i] = false;
+          else for (int row = 0; row < rows && bulletsActive[i]; row++)
             for (int column = 0; column < columns; column++) {
               int alienX = formationX + column * 28;
               int alienY = formationY + row * 20;
-              if (aliens[row][column] && bulletX >= alienX &&
-                  bulletX <= alienX + 14 && bulletY <= alienY + 11 &&
-                  bulletY + 7 >= alienY) {
+              if (aliens[row][column] && bulletX[i] >= alienX &&
+                  bulletX[i] <= alienX + 14 && bulletY[i] <= alienY + 11 &&
+                  bulletY[i] + 7 >= alienY) {
                 aliens[row][column] = false;
-                bulletActive = false;
+                bulletsActive[i] = false;
                 score += 10;
                 remaining--;
                 break;
               }
             }
+        }
+
+        if (!enemyBulletActive) {
+          int shooter = (score / 10 + formationX / 6) % columns;
+          for (int tries = 0; tries < columns; tries++) {
+            int column = (shooter + tries) % columns;
+            for (int row = rows - 1; row >= 0; row--) {
+              if (aliens[row][column]) {
+                enemyBulletActive = true;
+                enemyBulletX = formationX + column * 28 + 6;
+                enemyBulletY = formationY + row * 20 + 12;
+                break;
+              }
+            }
+            if (enemyBulletActive) break;
+          }
+        } else {
+          enemyBulletY += 12;
+          for (int i = 0; i < shieldCount && enemyBulletActive; i++) {
+            int shieldX = 13 + i * 48;
+            if (shieldHealth[i] > 0 && enemyBulletX >= shieldX &&
+                enemyBulletX <= shieldX + 30 && enemyBulletY + 7 >= 149 &&
+                enemyBulletY <= 165) {
+              shieldHealth[i]--;
+              enemyBulletActive = false;
+            }
+          }
+          if (enemyBulletActive && enemyBulletY + 7 >= 174 &&
+              enemyBulletX >= shipX && enemyBulletX <= shipX + 18) {
+            enemyBulletActive = false;
+            gameOver = true;
+          } else if (enemyBulletY > 190) enemyBulletActive = false;
         }
         if (remaining == 0) victory = true;
         else {
