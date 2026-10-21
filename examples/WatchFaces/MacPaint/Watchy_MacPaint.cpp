@@ -51,7 +51,7 @@ uint8_t WatchyMacPaint::getSelectedWatchFace() {
 }
 
 const char *WatchyMacPaint::getWatchFaceName(uint8_t index) {
-    static const char *names[] = {"MacPaint", "Pip-Boy", "DOS", "eatch"};
+    static const char *names[] = {"MacPaint", "Pip-Boy", "DOS", "Earth"};
     return names[index < 4 ? index : 0];
 }
 
@@ -66,7 +66,7 @@ void WatchyMacPaint::selectWatchFace(uint8_t index) {
 void WatchyMacPaint::drawWatchFacePreview(uint8_t index) {
     if (index == 1) drawPipBoy();
     else if (index == 2) drawDOS();
-    else if (index == 3) drawEatch();
+    else if (index == 3) drawEarth();
     else drawMacPaint();
 }
 
@@ -331,7 +331,6 @@ void WatchyMacPaint::animatePipBoy() {
     drawPipBoy();
     display.display(false);
     guiState = WATCHFACE_STATE;
-    deepSleep();
 }
 
 void WatchyMacPaint::drawDOS() {
@@ -356,7 +355,7 @@ void WatchyMacPaint::drawDOS() {
     display.println("<C:\\>esptool");
 }
 
-void WatchyMacPaint::drawEatch() {
+void WatchyMacPaint::drawEarth() {
     uint16_t background = watchFaceInverted ? GxEPD_BLACK : GxEPD_WHITE;
     uint16_t foreground = watchFaceInverted ? GxEPD_WHITE : GxEPD_BLACK;
     display.fillScreen(background);
