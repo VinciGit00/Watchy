@@ -1,4 +1,5 @@
 #include "Watchy_MacPaint.h"
+#include "earth_original.h"
 
 const unsigned char *numbers [10] = {numbers0, numbers1, numbers2, numbers3, numbers4, numbers5, numbers6, numbers7, numbers8, numbers9};
 RTC_DATA_ATTR uint8_t selectedWatchFace = 255;
@@ -360,9 +361,10 @@ void WatchyMacPaint::drawEarth() {
     uint16_t foreground = watchFaceInverted ? GxEPD_WHITE : GxEPD_BLACK;
     display.fillScreen(background);
     display.setTextColor(foreground);
+    display.drawBitmap(0, 0, earth_original_bitmap, 200, 200, foreground);
 
-    display.setFont(&DSEG7_Classic_Bold_53);
-    display.setCursor(5, 58);
+    display.setFont(&DSEG7_Classic_Regular_39);
+    display.setCursor(22, 57);
     if (currentTime.Hour < 10) display.print("0");
     display.print(currentTime.Hour);
     display.print(":");
@@ -372,52 +374,50 @@ void WatchyMacPaint::drawEarth() {
     display.setFont(&Seven_Segment10pt7b);
     int16_t x1, y1;
     uint16_t w, h;
-    String day = dayStr(currentTime.Wday);
+    String day = dayShortStr(currentTime.Wday);
+    day.toUpperCase();
     display.getTextBounds(day, 5, 85, &x1, &y1, &w, &h);
     if (currentTime.Wday == 4) w -= 5;
-    display.setCursor(85 - w, 85);
+    display.setCursor(91 - w, 91);
     display.println(day);
     String month = monthShortStr(currentTime.Month);
     display.getTextBounds(month, 60, 110, &x1, &y1, &w, &h);
-    display.setCursor(85 - w, 110);
+    display.setCursor(87 - w, 115);
     display.println(month);
 
     display.setFont(&DSEG7_Classic_Bold_25);
-    display.setCursor(5, 120);
+    display.setCursor(13, 126);
     if (currentTime.Day < 10) display.print("0");
     display.println(currentTime.Day);
-    display.setCursor(5, 150);
+    display.setCursor(13, 158);
     display.println(tmYearToCalendar(currentTime.Year));
 
     uint32_t stepCount = sensor.getCounter();
-    display.drawBitmap(10, 165, steps, 19, 23, foreground);
-    display.setCursor(35, 190);
+    display.setCursor(11, 194);
     display.println(stepCount);
 
-    display.drawBitmap(154, 73, battery, 37, 21, foreground);
-    display.fillRect(159, 78, 27, 11, background);
+    display.fillRect(163, 183, 27, 8, background);
     float voltage = getBatteryVoltage();
     uint8_t batteryLevel = voltage > 4.1 ? 3 : voltage > 3.95 ? 2 :
                            voltage > 3.80 ? 1 : 0;
     for (uint8_t i = 0; i < batteryLevel; i++)
-        display.fillRect(159 + i * 9, 78, 7, 11, foreground);
+        display.fillRect(163 + i * 9, 183, 7, 8, foreground);
 
-    display.drawBitmap(120, 77, WIFI_CONFIGURED ? wifi : wifioff,
+    display.drawBitmap(124, 176, WIFI_CONFIGURED ? wifi : wifioff,
                        26, 18, foreground);
 
     weatherData weather = getWeatherData();
-    int8_t temperature = weather.temperature;
-    display.setFont(&DSEG7_Classic_Regular_39);
-    display.getTextBounds(String(temperature), 0, 0, &x1, &y1, &w, &h);
-    if (159 - w - x1 > 87) display.setCursor(159 - w - x1, 150);
-    else {
-        display.setFont(&DSEG7_Classic_Bold_25);
-        display.getTextBounds(String(temperature), 0, 0, &x1, &y1, &w, &h);
-        display.setCursor(159 - w - x1, 136);
-    }
-    display.println(temperature);
-    display.drawBitmap(165, 110, weather.isMetric ? celsius : fahrenheit,
-                       26, 20, foreground);
+    display.setFont(&DSEG7_Classic_Regular_15);
+    display.setCursor(103, 157);
+    if (weather.sunrise.Hour < 10) display.print("0");
+    display.print(weather.sunrise.Hour); display.print(":");
+    if (weather.sunrise.Minute < 10) display.print("0");
+    display.print(weather.sunrise.Minute);
+    display.setCursor(158, 157);
+    if (weather.sunset.Hour < 10) display.print("0");
+    display.print(weather.sunset.Hour); display.print(":");
+    if (weather.sunset.Minute < 10) display.print("0");
+    display.print(weather.sunset.Minute);
 
     const unsigned char *weatherIcon = nullptr;
     int16_t code = weather.weatherConditionCode;
@@ -430,5 +430,5 @@ void WatchyMacPaint::drawEarth() {
     else if (code >= 300) weatherIcon = drizzle;
     else if (code >= 200) weatherIcon = thunderstorm;
     if (weatherIcon)
-        display.drawBitmap(145, 158, weatherIcon, 48, 32, foreground);
+        display.drawBitmap(147, 88, weatherIcon, 48, 32, foreground);
 }
