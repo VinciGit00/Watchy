@@ -21,11 +21,11 @@ uint8_t WatchyMacPaint::batteryPercentage(float voltage) {
 
 void WatchyMacPaint::drawBattery() {
     const uint8_t percent = batteryPercentage(getBatteryVoltage());
-    const int16_t x = 132;
+    const int16_t x = 169;
     const int16_t y = 170;
 
     // Clear a section of MacPaint's status bar for the battery gauge.
-    display.fillRect(x - 2, y - 2, 66, 17, GxEPD_WHITE);
+    display.fillRect(x - 2, y - 2, 31, 17, GxEPD_WHITE);
     display.drawRect(x, y, 25, 11, GxEPD_BLACK);
     display.fillRect(x + 25, y + 3, 2, 5, GxEPD_BLACK);
 
@@ -33,13 +33,6 @@ void WatchyMacPaint::drawBattery() {
     if (fillWidth > 0) {
         display.fillRect(x + 2, y + 2, fillWidth, 7, GxEPD_BLACK);
     }
-
-    display.setTextColor(GxEPD_BLACK);
-    display.setFont();
-    display.setTextSize(1);
-    display.setCursor(x + 31, y + 9);
-    display.print(percent);
-    display.print('%');
 }
 
 void WatchyMacPaint::drawWatchFace(){
