@@ -10,6 +10,10 @@
 #include "monofonto10pt7b.h"
 #include "monofonto28pt7b.h"
 #include "Px437_IBM_BIOS5pt7b.h"
+#include "DSEG7_Classic_Regular_15.h"
+#include "DSEG7_Classic_Bold_25.h"
+#include "DSEG7_Classic_Regular_39.h"
+#include "Seven_Segment10pt7b.h"
 
 class WatchyMacPaint : public Watchy{
     using Watchy::Watchy;
