@@ -15,6 +15,7 @@ class WatchyMacPaint : public Watchy{
     using Watchy::Watchy;
     public:
         void drawWatchFace();
+        void handleButtonPress();
         void showWatchFaceSelector();
         uint8_t getWatchFaceCount();
         uint8_t getSelectedWatchFace();
@@ -25,6 +26,8 @@ class WatchyMacPaint : public Watchy{
         void drawMacPaint();
         void drawPipBoy();
         void drawDOS();
+        void drawEatch();
+        void animatePipBoy();
         void drawMiniDigit(uint8_t digit, int16_t x, int16_t y);
         void drawBattery();
         uint8_t batteryPercentage(float voltage);
