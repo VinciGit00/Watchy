@@ -141,6 +141,9 @@ void Watchy::handleButtonPress() {
       case 5:
         showSpaceInvaders();
         break;
+      case 6:
+        showWatchFaceSelector();
+        break;
       default:
         break;
       }
@@ -220,6 +223,9 @@ void Watchy::handleButtonPress() {
           case 5:
             showSpaceInvaders();
             break;
+          case 6:
+            showWatchFaceSelector();
+            break;
           default:
             break;
           }
@@ -272,7 +278,8 @@ void Watchy::showMenu(byte menuIndex, bool partialRefresh) {
 
   const char *menuItems[] = {
       "About Watchy", "Vibrate Motor", "Show Accelerometer",
-      "Set Time",     "Sync NTP",      "Space Invaders"};
+      "Set Time",     "Sync NTP",      "Space Invaders",
+      "Set Watchface"};
   for (int i = 0; i < MENU_LENGTH; i++) {
     yPos = MENU_HEIGHT + (MENU_HEIGHT * i);
     display.setCursor(0, yPos);
@@ -304,7 +311,8 @@ void Watchy::showFastMenu(byte menuIndex) {
 
   const char *menuItems[] = {
       "About Watchy", "Vibrate Motor", "Show Accelerometer",
-      "Set Time",     "Sync NTP",      "Space Invaders"};
+      "Set Time",     "Sync NTP",      "Space Invaders",
+      "Set Watchface"};
   for (int i = 0; i < MENU_LENGTH; i++) {
     yPos = MENU_HEIGHT + (MENU_HEIGHT * i);
     display.setCursor(0, yPos);
@@ -322,6 +330,77 @@ void Watchy::showFastMenu(byte menuIndex) {
   display.display(true);
 
   guiState = MAIN_MENU_STATE;
+}
+
+uint8_t Watchy::getWatchFaceCount() { return 1; }
+uint8_t Watchy::getSelectedWatchFace() { return 0; }
+const char *Watchy::getWatchFaceName(uint8_t index) { return "Default"; }
+void Watchy::drawWatchFacePreview(uint8_t index) { drawWatchFace(); }
+void Watchy::selectWatchFace(uint8_t index) {}
+
+void Watchy::showWatchFaceSelector() {
+  guiState = APP_STATE;
+  pinMode(MENU_BTN_PIN, INPUT);
+  pinMode(BACK_BTN_PIN, INPUT);
+  pinMode(UP_BTN_PIN, INPUT);
+  pinMode(DOWN_BTN_PIN, INPUT);
+
+  uint8_t selected = getSelectedWatchFace();
+  const uint8_t count = getWatchFaceCount();
+  auto pressed = [&](int pin) { return digitalRead(pin) == ACTIVE_LOW; };
+  auto waitForRelease = [&]() {
+    while (pressed(MENU_BTN_PIN) || pressed(BACK_BTN_PIN) ||
+           pressed(UP_BTN_PIN) || pressed(DOWN_BTN_PIN)) delay(20);
+    delay(80);
+  };
+  auto drawSelection = [&]() {
+    drawWatchFacePreview(selected);
+    display.fillRect(0, 174, 200, 26, GxEPD_BLACK);
+    display.drawFastHLine(0, 173, 200, GxEPD_WHITE);
+    display.setFont();
+    display.setTextSize(1);
+    display.setTextColor(GxEPD_WHITE);
+    display.setCursor(5, 184);
+    display.print(selected + 1);
+    display.print("/");
+    display.print(count);
+    display.print("  ");
+    display.print(getWatchFaceName(selected));
+    display.setCursor(5, 196);
+    display.print("RIGHT: SELECT  FIRE: OK");
+    display.display(false);
+  };
+
+  drawSelection();
+  waitForRelease();
+  unsigned long lastInput = millis();
+  while (millis() - lastInput < 60000UL) {
+    if (pressed(MENU_BTN_PIN)) {
+      waitForRelease();
+      showMenu(menuIndex, false);
+      return;
+    }
+    if (pressed(BACK_BTN_PIN)) {
+      selectWatchFace(selected);
+      waitForRelease();
+      RTC.read(currentTime);
+      showWatchFace(false);
+      return;
+    }
+    if (pressed(UP_BTN_PIN)) {
+      selected = selected == 0 ? count - 1 : selected - 1;
+      lastInput = millis();
+      drawSelection();
+      waitForRelease();
+    } else if (pressed(DOWN_BTN_PIN)) {
+      selected = (selected + 1) % count;
+      lastInput = millis();
+      drawSelection();
+      waitForRelease();
+    }
+    delay(20);
+  }
+  showMenu(menuIndex, false);
 }
 
 void Watchy::showSpaceInvaders() {

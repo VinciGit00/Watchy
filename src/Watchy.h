@@ -90,6 +90,7 @@ public:
   void showUpdateFW();
   void showSyncNTP();
   void showSpaceInvaders();
+  void showWatchFaceSelector();
   bool syncNTP();
   bool syncNTP(long gmt);
   bool syncNTP(long gmt, String ntpServer);
@@ -102,6 +103,11 @@ public:
   void showWatchFace(bool partialRefresh);
   virtual void drawWatchFace(); // override this method for different watch
                                 // faces
+  virtual uint8_t getWatchFaceCount();
+  virtual uint8_t getSelectedWatchFace();
+  virtual const char *getWatchFaceName(uint8_t index);
+  virtual void drawWatchFacePreview(uint8_t index);
+  virtual void selectWatchFace(uint8_t index);
 
 private:
   void _bmaConfig();
