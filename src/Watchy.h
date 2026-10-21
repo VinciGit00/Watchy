@@ -90,7 +90,7 @@ public:
   void showUpdateFW();
   void showSyncNTP();
   void showSpaceInvaders();
-  void showWatchFaceSelector();
+  virtual void showWatchFaceSelector();
   bool syncNTP();
   bool syncNTP(long gmt);
   bool syncNTP(long gmt, String ntpServer);

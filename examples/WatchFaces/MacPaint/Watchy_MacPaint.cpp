@@ -35,6 +35,86 @@ void WatchyMacPaint::drawWatchFacePreview(uint8_t index) {
     else drawMacPaint();
 }
 
+void WatchyMacPaint::showWatchFaceSelector() {
+    guiState = APP_STATE;
+    pinMode(MENU_BTN_PIN, INPUT);
+    pinMode(BACK_BTN_PIN, INPUT);
+    pinMode(UP_BTN_PIN, INPUT);
+    pinMode(DOWN_BTN_PIN, INPUT);
+    uint8_t selected = getSelectedWatchFace();
+
+    auto isPressed = [](int pin) { return digitalRead(pin) == HIGH; };
+    auto waitForRelease = [&]() {
+        while (isPressed(MENU_BTN_PIN) || isPressed(BACK_BTN_PIN) ||
+               isPressed(UP_BTN_PIN) || isPressed(DOWN_BTN_PIN)) delay(20);
+        delay(100);
+    };
+    auto drawSelector = [&]() {
+        display.setFullWindow();
+        display.fillScreen(GxEPD_BLACK);
+        display.setTextColor(GxEPD_WHITE);
+        display.setFont(&FreeMonoBold9pt7b);
+        display.setCursor(8, 24);
+        display.print("SET WATCHFACE");
+        display.drawFastHLine(0, 34, 200, GxEPD_WHITE);
+        for (uint8_t i = 0; i < 3; i++) {
+            int y = 67 + i * 34;
+            if (i == selected) {
+                display.fillRect(3, y - 20, 194, 27, GxEPD_WHITE);
+                display.setTextColor(GxEPD_BLACK);
+                display.setCursor(10, y);
+                display.print("> ");
+            } else {
+                display.setTextColor(GxEPD_WHITE);
+                display.setCursor(10, y);
+                display.print("  ");
+            }
+            display.print(getWatchFaceName(i));
+        }
+        display.setFont();
+        display.setTextColor(GxEPD_WHITE);
+        display.setCursor(8, 181);
+        display.print("RIGHT BUTTONS: MOVE");
+        display.setCursor(8, 194);
+        display.print("BOTTOM LEFT: OK");
+        display.display(false);
+    };
+
+    drawSelector();
+    waitForRelease();
+    unsigned long lastInput = millis();
+    while (millis() - lastInput < 60000UL) {
+        if (isPressed(MENU_BTN_PIN)) {
+            waitForRelease();
+            showMenu(menuIndex, false);
+            return;
+        }
+        if (isPressed(BACK_BTN_PIN)) {
+            selectWatchFace(selected);
+            waitForRelease();
+            RTC.read(currentTime);
+            display.setFullWindow();
+            drawWatchFacePreview(selected);
+            display.display(false);
+            guiState = WATCHFACE_STATE;
+            return;
+        }
+        if (isPressed(UP_BTN_PIN)) {
+            selected = selected == 0 ? 2 : selected - 1;
+            lastInput = millis();
+            drawSelector();
+            waitForRelease();
+        } else if (isPressed(DOWN_BTN_PIN)) {
+            selected = (selected + 1) % 3;
+            lastInput = millis();
+            drawSelector();
+            waitForRelease();
+        }
+        delay(20);
+    }
+    showMenu(menuIndex, false);
+}
+
 uint8_t WatchyMacPaint::batteryPercentage(float voltage) {
     static const float volts[] = {3.40, 3.55, 3.65, 3.75, 3.85, 3.95, 4.05, 4.20};
     static const uint8_t percentages[] = {0, 5, 10, 25, 50, 70, 85, 100};
@@ -120,10 +200,10 @@ void WatchyMacPaint::drawMacPaint(){
         (uint8_t)((year / 10) % 10), (uint8_t)(year % 10)};
     int16_t dateX = 49;
     for (uint8_t i = 0; i < 8; i++) {
-        drawMiniDigit(dateDigits[i], dateX, 132);
+        drawMiniDigit(dateDigits[i], dateX, 128);
         dateX += 14;
         if (i == 1 || i == 3) {
-            display.drawLine(dateX, 146, dateX + 5, 133, GxEPD_BLACK);
+            display.drawLine(dateX, 142, dateX + 5, 129, GxEPD_BLACK);
             dateX += 8;
         }
     }

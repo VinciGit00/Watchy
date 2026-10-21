@@ -15,6 +15,7 @@ class WatchyMacPaint : public Watchy{
     using Watchy::Watchy;
     public:
         void drawWatchFace();
+        void showWatchFaceSelector();
         uint8_t getWatchFaceCount();
         uint8_t getSelectedWatchFace();
         const char *getWatchFaceName(uint8_t index);
